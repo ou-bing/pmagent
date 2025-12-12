@@ -8,19 +8,39 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from django.conf import settings
 from django.contrib.auth.models import User
 from jose import jwt
-from langchain.chat_models import init_chat_model
-from langchain_core.messages import BaseMessage, HumanMessage
+from langchain_core.messages import HumanMessage
+from langchain_core.runnables import RunnableConfig
+from langchain_openai import ChatOpenAI
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import END, START, MessagesState, StateGraph
 
 from domains.im.models import Message, Session
 
 logger = logging.getLogger(__name__)
 
-model = init_chat_model(
-    settings.CHAT_MODEL,
-    temperature=0,
-    base_url=settings.CHAT_MODEL_BASE_URL,
-    api_key=settings.CHAT_MODEL_API_KEY,
-)
+
+# 定义节点
+def chatbot(state: MessagesState):
+    return {
+        "messages": [
+            ChatOpenAI(
+                model=settings.CHAT_MODEL,
+                base_url=settings.CHAT_MODEL_BASE_URL,
+                api_key=settings.CHAT_MODEL_API_KEY,
+            ).invoke(state["messages"])
+        ]
+    }
+
+
+# 构建图（添加记忆）
+graph = StateGraph(MessagesState)
+graph.add_node("chatbot", chatbot)
+graph.add_edge(START, "chatbot")
+graph.add_edge("chatbot", END)
+
+# 使用 MemorySaver 保存对话历史
+memory = MemorySaver()
+graph_app = graph.compile(checkpointer=memory)
 
 
 class Payload(TypedDict):
@@ -98,24 +118,24 @@ class AsyncChatConsumer(AsyncWebsocketConsumer):
         p: Payload = event["payload"]
         await self.send(text_data=orjson.dumps(p).decode("utf-8"))
 
-        res: BaseMessage = await model.ainvoke(
-            [
-                HumanMessage(
-                    content=p["content"],
-                )
-            ]
+        # 多轮对话
+        config = RunnableConfig(configurable={"thread_id": p["session_id"]})
+        res = await graph_app.ainvoke(
+            {"messages": [HumanMessage(p["content"])]}, config=config
         )
+        res_msg = res["messages"][-1]
+
         msg = await Message.objects.acreate(
             session_id=p["session_id"],
             user=self.scope["user"],  # type: ignore
-            role=res.type,
-            body={"content": str(res.content)},
+            role=res_msg.type,
+            body={"content": str(res_msg.content)},
         )
         await self.send(
             text_data=orjson.dumps(
                 Payload(
                     id=msg.pk,
-                    content=str(res.content),
+                    content=str(res_msg.content),
                     role="ai",
                     session_id=p["session_id"],
                 )
