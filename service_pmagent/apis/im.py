@@ -1,18 +1,30 @@
 import logging
 
 from django.http import HttpRequest
-from ninja import FilterSchema, ModelSchema, Query, Router
+from ninja import Field, FilterSchema, ModelSchema, Query, Router, Schema
 
 from domains.im.models import Message, Session
 from domains.infra.django_ninja_utils import (
-    JwtAuth,
+    JwtAndSessionAuth,
     ListResponseSchema,
     ResponseSchema,
 )
 
 logger = logging.getLogger(__name__)
 
-router = Router(auth=JwtAuth())
+router = Router(auth=JwtAndSessionAuth())
+
+
+class CreateSessionReq(Schema):
+    title: str = Field(
+        default="",
+    )
+
+
+class CreateSessionRes(ModelSchema):
+    class Meta:
+        model = Session
+        fields = "__all__"
 
 
 class ListSessionRes(ModelSchema):
@@ -29,6 +41,22 @@ class ListMessageRes(ModelSchema):
     class Meta:
         model = Message
         fields = "__all__"
+
+
+@router.post(
+    "/session",
+    summary="",
+    response={200: ResponseSchema[CreateSessionRes], 400: ResponseSchema},
+)
+def create_session(
+    request: HttpRequest,
+    data: CreateSessionReq,
+):
+    session = Session.objects.create(
+        title=data.title,
+        user_id=request.user.pk,
+    )
+    return ResponseSchema(data=session)
 
 
 @router.get(
