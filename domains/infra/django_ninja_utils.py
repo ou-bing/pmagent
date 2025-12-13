@@ -32,6 +32,16 @@ class JwtAuth(APIKeyHeader):
             return False
 
 
+class JwtAndSessionAuth(JwtAuth):
+    def authenticate(self, request, key: str):
+        user = super().authenticate(request, key)
+        if user:
+            return user
+        if request.user.is_authenticated:
+            return request.user
+        return False
+
+
 T = TypeVar("T")
 
 
