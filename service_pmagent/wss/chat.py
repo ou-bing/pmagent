@@ -1,5 +1,5 @@
 import logging
-from typing import Literal, Optional, TypedDict
+from typing import Any, Literal, Optional, TypedDict
 from urllib.parse import parse_qs
 
 import orjson
@@ -45,7 +45,7 @@ graph_app = graph.compile(checkpointer=memory)
 
 class Payload(TypedDict):
     id: Optional[int]
-    content: str
+    content: Any
     role: Literal["human", "ai"]
     session_id: str
 
@@ -129,13 +129,13 @@ class AsyncChatConsumer(AsyncWebsocketConsumer):
             session_id=p["session_id"],
             user=self.scope["user"],  # type: ignore
             role=res_msg.type,
-            body={"content": str(res_msg.content)},
+            body={"content": res_msg.content},
         )
         await self.send(
             text_data=orjson.dumps(
                 Payload(
                     id=msg.pk,
-                    content=str(res_msg.content),
+                    content=res_msg.content,
                     role="ai",
                     session_id=p["session_id"],
                 )
