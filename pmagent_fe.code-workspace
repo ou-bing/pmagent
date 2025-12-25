@@ -1,0 +1,53 @@
+{
+    "folders": [
+        {
+            "name": "pmagent_fe",
+            "path": "service_pmagent/html"
+        }
+    ],
+    "settings": {
+        "files.exclude": {
+            "**/.git": true,
+            "**/.DS_Store": true,
+            "**/node_modules": true,
+            "**/__pycache__": true,
+            "**/*.pyc": true,
+            "**/.venv": true,
+        },
+        "typescript.tsdk": "service_pmagent/html/node_modules/typescript/lib",
+        "eslint.workingDirectories": [
+            "service_pmagent/html"
+        ],
+        "explorer.fileNesting.patterns": {
+            "tsconfig.json": "tsconfig.*.json, env.d.ts",
+            "vite.config.*": "jsconfig*, vitest.config.*, cypress.config.*, playwright.config.*",
+            "package.json": "package-lock.json, pnpm*, .yarnrc*, yarn*, .eslint*, eslint*, .oxlint*, oxlint*, .prettier*, prettier*, .editorconfig"
+        },
+        "editor.codeActionsOnSave": {
+            "source.fixAll": "explicit"
+        },
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "extensions": {
+        "recommendations": [
+            "Vue.volar",
+            "dbaeumer.vscode-eslint",
+            "EditorConfig.EditorConfig",
+            "oxc.oxc-vscode",
+            "esbenp.prettier-vscode"
+        ]
+    },
+    "launch": {
+        "version": "0.2.0",
+        "configurations": [
+            {
+                "name": "Launch Chrome",
+                "request": "launch",
+                "type": "chrome",
+                "url": "http://localhost:5173",
+                "webRoot": "${workspaceFolder}"
+            }
+        ]
+    },
+}
