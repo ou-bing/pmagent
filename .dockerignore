@@ -1,0 +1,16 @@
+*.log
+__pycache__
+.git
+.idea
+.vscode
+.gitignore
+.gitlab-ci.yml
+.pylintrc
+.python-version
+tests
+.DS_Store
+.venv
+.env
+db.sqlite3
+schema.json
+deployment/kubernetes
