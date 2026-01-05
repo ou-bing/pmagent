@@ -133,6 +133,8 @@ packaging==25.0
     #   gunicorn
     #   langchain-core
     #   langsmith
+psycopg2-binary==2.9.11
+    # via pmagent (pyproject.toml)
 pyasn1==0.6.1
     # via
     #   python-jose
