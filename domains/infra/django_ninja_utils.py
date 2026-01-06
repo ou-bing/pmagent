@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Generic, List, Optional, TypeVar
 
 import orjson
@@ -9,6 +10,8 @@ from ninja import Field, Schema
 from ninja.pagination import AsyncPaginationBase
 from ninja.renderers import BaseRenderer
 from ninja.security import APIKeyHeader
+
+logger = logging.getLogger(__name__)
 
 
 class ORJSONRenderer(BaseRenderer):
@@ -22,24 +25,18 @@ class JwtAuth(APIKeyHeader):
     param_name = "Authorization"
 
     def authenticate(self, request, key: str):
+        if not key and request.user.is_authenticated:
+            return request.user
         try:
             payload = jwt.decode(
                 key.replace("Bearer ", ""), settings.SECRET_KEY, algorithms=["HS256"]
             )
             user = User.objects.get(pk=payload["id"])
+            request.user = user
             return user
         except BaseException:
+            logger.exception("JWT authentication failed")
             return False
-
-
-class JwtAndSessionAuth(JwtAuth):
-    def authenticate(self, request, key: str):
-        user = super().authenticate(request, key)
-        if user:
-            return user
-        if request.user.is_authenticated:
-            return request.user
-        return False
 
 
 T = TypeVar("T")

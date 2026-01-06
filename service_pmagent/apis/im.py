@@ -5,14 +5,14 @@ from ninja import Field, FilterSchema, ModelSchema, Query, Router, Schema
 
 from domains.im.models import Message, Session
 from domains.infra.django_ninja_utils import (
-    JwtAndSessionAuth,
+    JwtAuth,
     ListResponseSchema,
     ResponseSchema,
 )
 
 logger = logging.getLogger(__name__)
 
-router = Router(auth=JwtAndSessionAuth())
+router = Router(auth=JwtAuth())
 
 
 class CreateSessionReq(Schema):
