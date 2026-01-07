@@ -1,6 +1,10 @@
 import logging
 
-from django.http import HttpRequest
+import orjson
+from django.conf import settings
+from django.http import HttpRequest, StreamingHttpResponse
+from langchain_core.messages import HumanMessage
+from langchain_openai import ChatOpenAI
 from ninja import Field, FilterSchema, ModelSchema, Query, Router, Schema
 
 from domains.im.models import Message, Session
@@ -41,6 +45,15 @@ class ListMessageRes(ModelSchema):
     class Meta:
         model = Message
         fields = "__all__"
+
+
+class SseReq(Schema):
+    content: str = Field(description="")
+
+
+class SseRes(Schema):
+    content: str = Field(description="")
+    type: str = Field(description="")
 
 
 @router.post(
@@ -94,3 +107,34 @@ def list_messages(
         page,
         size,
     )
+
+
+@router.post(
+    "/sse",
+    summary="",
+    auth=None,
+    response={200: SseRes, 400: ResponseSchema},
+)
+async def sse_stream(request: HttpRequest, data: SseReq):
+    model = ChatOpenAI(
+        model="gpt-5-nano",
+        base_url=settings.CHAT_MODEL_BASE_URL,
+        api_key=settings.CHAT_MODEL_API_KEY,
+    )
+
+    async def event_stream():
+        async for chunk in model.astream([HumanMessage(content=data.content)]):
+            event = orjson.dumps(
+                SseRes(
+                    content=str(chunk.content),
+                    type=chunk.type,
+                ).dict()
+            )
+            yield b"data: " + event + b"\n\n"
+
+    response = StreamingHttpResponse(
+        event_stream(),
+        content_type="text/event-stream",
+    )
+    response["Cache-Control"] = "no-cache"
+    return response
