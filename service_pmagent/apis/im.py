@@ -49,9 +49,11 @@ class ListMessageRes(ModelSchema):
 
 class SseReq(Schema):
     content: str = Field(description="")
+    session_id: int = Field(description="")
 
 
 class SseRes(Schema):
+    id: int = Field(description="")
     content: str = Field(description="")
     type: str = Field(description="")
 
@@ -112,7 +114,6 @@ def list_messages(
 @router.post(
     "/sse",
     summary="",
-    auth=None,
     response={200: SseRes, 400: ResponseSchema},
 )
 async def sse_stream(request: HttpRequest, data: SseReq):
@@ -121,16 +122,42 @@ async def sse_stream(request: HttpRequest, data: SseReq):
         base_url=settings.CHAT_MODEL_BASE_URL,
         api_key=settings.CHAT_MODEL_API_KEY,
     )
+    q_msg = await Message.objects.acreate(
+        user_id=request.user.pk,
+        body={"content": data.content},
+        role=Message.Role.HUMAN,
+        session_id=data.session_id,
+    )
 
     async def event_stream():
+        q_event = orjson.dumps(
+            SseRes(
+                id=q_msg.pk,
+                content=data.content,
+                type="HumanMessage",
+            ).dict()
+        )
+        yield b"data: " + q_event + b"\n\n"
+        a_message = await Message.objects.acreate(
+            user_id=request.user.pk,
+            role=Message.Role.AI,
+            session_id=data.session_id,
+        )
+        a_message_content = ""
         async for chunk in model.astream([HumanMessage(content=data.content)]):
+            if not chunk.content:
+                continue
+            a_message_content += str(chunk.content)
             event = orjson.dumps(
                 SseRes(
+                    id=a_message.pk,
                     content=str(chunk.content),
                     type=chunk.type,
                 ).dict()
             )
             yield b"data: " + event + b"\n\n"
+        a_message.body = {"content": a_message_content}
+        await a_message.asave()
 
     response = StreamingHttpResponse(
         event_stream(),
