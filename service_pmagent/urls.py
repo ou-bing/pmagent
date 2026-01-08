@@ -26,6 +26,7 @@ from ninja import NinjaAPI
 
 from domains.infra.django_ninja_utils import ORJSONRenderer
 from service_pmagent.interfaces.http.im import router as im_router
+from service_pmagent.interfaces.http.llm import router as llm_router
 from service_pmagent.interfaces.http.user import router as user_router
 from service_pmagent.interfaces.websocket import chat
 
@@ -51,6 +52,7 @@ def service_unavailable_api(request, exc: Exception):
 
 api.add_router("user", user_router, tags=["user"])
 api.add_router("im", im_router, tags=["im"])
+api.add_router("llm", llm_router, tags=["llm"])
 
 
 urlpatterns = [
@@ -59,9 +61,18 @@ urlpatterns = [
 ]
 
 if settings.DEBUG:
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(
+        settings.STATIC_URL,
+        document_root=settings.STATIC_ROOT,
+    )
+    urlpatterns += static(
+        settings.MEDIA_URL,
+        document_root=settings.MEDIA_ROOT,
+    )
 
 websocket_urlpatterns = [
-    re_path(r"ws/chat/(?P<session_id>\w+)/$", chat.AsyncChatConsumer.as_asgi()),  # type: ignore
+    re_path(
+        r"ws/chat/(?P<session_id>\w+)/$",
+        chat.AsyncChatConsumer.as_asgi(),  # type: ignore
+    ),
 ]
