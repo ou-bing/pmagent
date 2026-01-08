@@ -25,9 +25,9 @@ from django.urls import path, re_path
 from ninja import NinjaAPI
 
 from domains.infra.django_ninja_utils import ORJSONRenderer
-from service_pmagent.apis.im import router as im_router
-from service_pmagent.apis.user import router as user_router
-from service_pmagent.wss import chat
+from service_pmagent.interfaces.http.im import router as im_router
+from service_pmagent.interfaces.http.user import router as user_router
+from service_pmagent.interfaces.websocket import chat
 
 logger = logging.getLogger(__name__)
 

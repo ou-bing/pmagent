@@ -5,4 +5,4 @@ class ServicePmagentConfig(AppConfig):
     name = "service_pmagent"
 
     def ready(self):
-        from service_pmagent.admins import im  # noqa
+        from service_pmagent.interfaces.admin import im  # noqa
